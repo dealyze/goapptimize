@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"runtime"
 )
+
+// debug should be true for the test logging
+var debug = false
 
 // apiURL is the apptimize api url
 const apiURL = "https://api.apptimize.com"
@@ -79,11 +83,15 @@ func (a *apptimize) Track(userID, event string, attributes ...interface{}) error
 // request issues a request to the api and parses the response
 func (a *apptimize) request(method, url string, reqBody, respBody interface{}) error {
 	var buffer bytes.Buffer
-	if err := json.NewEncoder(&buffer).Encode(&reqBody); err != nil {
+	if reqBody == nil {
+		// no request body
+	} else if err := json.NewEncoder(&buffer).Encode(&reqBody); err != nil {
+		logd(err)
 		return err
 	}
 	req, err := http.NewRequest(method, url, &buffer)
 	if err != nil {
+		logd(err)
 		return err
 	}
 	req.Header.Add("ApptimizeApiToken", a.apiToken)
@@ -94,14 +102,29 @@ func (a *apptimize) request(method, url string, reqBody, respBody interface{}) e
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		logd(err)
 		return err
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode > 299 || resp.StatusCode < 200 {
-		return fmt.Errorf("%d: %s", resp.StatusCode, resp.Status)
+		err := fmt.Errorf("%d: %s", resp.StatusCode, resp.Status)
+		logd(err)
+		return err
+	} else if respBody == nil {
+		// no response body
 	} else if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+		logd(err)
 		return err
 	}
 	return nil
+}
+
+// logf is a degub log
+func logd(is ...interface{}) {
+	if debug {
+		for _, i := range is {
+			log.Output(2, fmt.Sprintf("%s", i))
+		}
+	}
 }
