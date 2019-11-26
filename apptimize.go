@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"runtime"
 )
 
@@ -100,10 +101,18 @@ func (a *apptimize) request(method, url string, reqBody, respBody interface{}) e
 	req.Header.Add("ApptimizeOperatingSystem", a.os)
 	req.Header.Add("ApptimizeOperatingSystemVersion", a.osVersion)
 
+	if debug {
+		bs, _ := httputil.DumpRequest(req, true)
+		logd(string(bs))
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logd(err)
 		return err
+	} else if debug {
+		bs, _ := httputil.DumpResponse(resp, true)
+		logd(string(bs))
 	}
 
 	defer resp.Body.Close()

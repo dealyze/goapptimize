@@ -1,19 +1,39 @@
 package apptimize
 
-import "testing"
+import (
+	"fmt"
+	"log"
+	"testing"
+)
 
 func TestApptimize(t *testing.T) {
+
+	// add your credentials here to run these tests
+	apiToken := "<api-token>"
+	experiment := "<experiment-with-two-variations>"
+
+	// debug logging
+	debug = true
+	log.SetFlags(log.Llongfile)
+
+	// unit tests
 	apptimize := New(&Config{
-		APIToken: "<test-api-token>",
+		APIToken: apiToken,
 	})
 	if isSuccess := t.Run("test for code block variants", func(t *testing.T) {
-		if v, err := apptimize.Variant("test-user", "test-experiment"); err != nil {
-			t.Error(err)
-			return
-		} else if v == "a" {
-			t.Log("run code block a")
-		} else if v == "b" {
-			t.Log("run code block b")
+		var baselineCount, variation1Count int
+		for i := 0; i < 50; i++ {
+			if v, err := apptimize.Variant(fmt.Sprintf("test-user-%d", i), experiment); err != nil {
+				t.Error(err)
+			} else if v == "baseline" {
+				baselineCount++
+			} else if v == "variation1" {
+				variation1Count++
+			}
+		}
+		t.Logf("%d basline variants and %d variation1", baselineCount, variation1Count)
+		if passed := baselineCount > 0 && variation1Count > 0 && baselineCount+variation1Count == 50; !passed {
+			t.Fail()
 		}
 	}) && t.Run("test for tracking events", func(t *testing.T) {
 		if err := apptimize.Track("test-user", "did-something-with-no-attributes"); err != nil {
